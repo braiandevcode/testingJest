@@ -1,34 +1,41 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+// notebooks.controller.ts
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { NotebooksService } from './notebooks.service';
 import { CreateNotebookDto } from './dto/create-notebook.dto';
-import { UpdateNotebookDto } from './dto/update-notebook.dto';
+import { Notebook } from './entities/notebook.entity';
 
 @Controller('notebooks')
 export class NotebooksController {
   constructor(private readonly notebooksService: NotebooksService) {}
 
-  @Post()
-  create(@Body() createNotebookDto: CreateNotebookDto) {
-    return this.notebooksService.create(createNotebookDto);
-  }
-
   @Get()
-  findAll() {
-    return this.notebooksService.findAll();
+  async findAll(): Promise<Notebook[]> {
+    try {
+      return await this.notebooksService.findAll();
+    } catch (error) {
+      throw new HttpException(
+        'Error retrieving notebooks',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.notebooksService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateNotebookDto: UpdateNotebookDto) {
-    return this.notebooksService.update(+id, updateNotebookDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.notebooksService.remove(+id);
+  @Post()
+  async create(@Body() createNotebookDto: CreateNotebookDto): Promise<Notebook> {
+    try {
+      return await this.notebooksService.create(createNotebookDto);
+    } catch (error) {
+      throw new HttpException(
+        'Error creating notebook',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 }
