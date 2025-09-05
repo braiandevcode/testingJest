@@ -13,11 +13,11 @@ export class NotebooksService {
   ) {}
 
   async findAll(): Promise<Notebook[]> {
-    return this.notebookRepo.find();
+    return await this.notebookRepo.find();
   }
 
   async create(dto: CreateNotebookDto): Promise<Notebook> {
     const notebook = this.notebookRepo.create(dto);
-    return this.notebookRepo.save(notebook);
+    return await this.notebookRepo.save(notebook);
   }
 }

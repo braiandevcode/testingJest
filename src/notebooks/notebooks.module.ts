@@ -5,8 +5,11 @@ import { NotebooksController } from './notebooks.controller';
 import { NotebooksService } from './notebooks.service';
 import { Notebook } from './entities/notebook.entity';
 
+// DECORADOR MODULO
 @Module({
-  imports: [TypeOrmModule.forFeature([Notebook])],
+  imports: [
+    TypeOrmModule.forFeature([Notebook])
+  ],
   controllers: [NotebooksController],
   providers: [NotebooksService],
 })
