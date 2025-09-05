@@ -8,8 +8,10 @@ import { Notebook } from './entities/notebook.entity';
 // TEST UNITARIO
 describe('NotebooksController', () => {
   let controller: NotebooksController;
+  let service: NotebooksService;
+
+  // MOCKEANDO SIN spyOn
   let mockNotebookService = {
-    // findAll: () => [],  // ==> DEVOLVER VACIO
     findAll: () => [
       {
         title: 'Test-1',
@@ -19,23 +21,27 @@ describe('NotebooksController', () => {
         title: 'Test-2',
         content: 'Contenido-2',
       },
-    ], // ==> DEVOLVER DATOS
+    ],
 
     create: () => ({ title: 'Test', content: 'Contenido' }),
   };
 
+  // CONFIGURACION EN CADA TEST
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [NotebooksController],
       providers: [NotebooksService],
     })
+      // AQUI SOBREESCRIBIMOS EL SERVICIO ENTERO → NO PODEMOS USAR spyOn
       .overrideProvider(NotebooksService)
       .useValue(mockNotebookService)
       .compile();
 
     controller = module.get<NotebooksController>(NotebooksController);
+    service = module.get<NotebooksService>(NotebooksService);
   });
 
+  //----- PRUEBAS----
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });
@@ -55,7 +61,7 @@ describe('NotebooksController', () => {
     ]);
   });
 
-  // TEST DE CRACION
+  // TEST DE CREACION
   it('debería crear un notebook correctamente', async () => {
     const createDto: CreateNotebookDto = {
       title: 'Test',
@@ -65,53 +71,72 @@ describe('NotebooksController', () => {
     expect(result).toEqual(createDto);
   });
 
-  // TEST UNITARIO - Errores
-  it('debería lanzar excepción en findAll', async () => {
-    const mockErrorService = {
-      findAll: () => {
-        throw new Error('Error retrieving notebooks');
-      },
-      create: () => ({ title: 'Test', content: 'Contenido' }),
-    };
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [NotebooksController],
-      providers: [NotebooksService],
-    })
-      .overrideProvider(NotebooksService)
-      .useValue(mockErrorService)
-      .compile();
+  // USANDO SEGUNDA FORMA DE MOCKEADO CON "jest.spyOn" TEST UNITARIO
+  describe('Errores controller', () => {
+    let message: string;
 
-    const ctrl = module.get<NotebooksController>(NotebooksController);
+    // CONFIGURAMOS EN CADA TEST
+    beforeEach(async () => {
+      const module: TestingModule = await Test.createTestingModule({
+        controllers: [NotebooksController],
+        providers: [
+          NotebooksService,
+          {
+            // AQUI SE INYECTA EL REPO FAKE PARA QUE NEST PUEDA CREAR EL SERVICIO REAL
+            provide: getRepositoryToken(Notebook),
+            useValue: {
+              find: jest.fn(), // METODOS FAKE, PARA QUE NO ROMPA
+              create: jest.fn(),
+              save: jest.fn(),
+            },
+          },
+        ],
+      }).compile();
 
-    await expect(ctrl.findAll()).rejects.toThrow('Error retrieving notebooks');
-  });
+      controller = module.get<NotebooksController>(NotebooksController);
+      service = module.get<NotebooksService>(NotebooksService);
+    });
 
-  it('debería lanzar excepción en create', async () => {
-    const mockErrorService = {
-      findAll: () => [],
-      create: () => {
-        throw new Error('Error creating notebook');
-      },
-    };
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [NotebooksController],
-      providers: [NotebooksService],
-    })
-      .overrideProvider(NotebooksService)
-      .useValue(mockErrorService)
-      .compile();
+    // TEST UNITARIO - ERRORES
+    it('debería lanzar excepción en findAll', async () => {
+      message = 'Error retrieving notebooks';
+      const resultError = new Error(message);
 
-    const ctrl = module.get<NotebooksController>(NotebooksController);
+      // CON EL SERVICIO REAL, PODEMOS USAR spyOn
+      jest.spyOn(service, 'findAll').mockImplementation(async () => {
+        throw resultError;
+      });
 
-    await expect(
-      ctrl.create({ title: 'Test', content: 'Contenido' }),
-    ).rejects.toThrow('Error creating notebook');
+      // REJECT
+      await expect(controller.findAll()).rejects.toThrow(resultError);
+    });
+
+    // TEST UNITARIO - ERRORES
+    it('debería lanzar excepción en create', async () => {
+      message = 'Error creating notebook';
+      const resultError = new Error(message);
+
+      // DTO FAKE
+      const createDto: CreateNotebookDto = {
+        title: 'Test',
+        content: 'Contenido',
+      };
+
+      // CON EL SERVICIO REAL, PODEMOS USAR spyOn
+      jest.spyOn(service, 'create').mockImplementation(async () => {
+        throw resultError;
+      });
+
+      // REJECT
+      await expect(controller.create(createDto)).rejects.toThrow(resultError);
+    });
   });
 });
 
 // TEST DE INTEGRACION
 describe('NotebooksController - Integración', () => {
   let controller: NotebooksController;
+  let service: NotebooksService;
 
   const createDto = { title: 'Test', content: 'Contenido' };
 
@@ -135,6 +160,7 @@ describe('NotebooksController - Integración', () => {
     }).compile();
 
     controller = module.get<NotebooksController>(NotebooksController);
+    service = module.get<NotebooksService>(NotebooksService);
   });
 
   it('should be defined', () => {
@@ -158,7 +184,3 @@ describe('NotebooksController - Integración', () => {
     expect(result).toEqual(createDto);
   });
 });
-
-
-
-
